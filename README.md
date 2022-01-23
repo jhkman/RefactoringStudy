@@ -1,7 +1,5 @@
 # RefactoringStudy
-마틴 파울러의 Refactoring 책을 보고 공부하는 공간
-# CleanArchitectureStudy
-[Refactoring, 마틴 파울러](https://github.com/WBBookStudy/RefactoringStudy) 책을 보고 스터디/발표를 하기위한 자료를 업로드하는 레포지토리입니다.
+[Refactoring, 마틴 파울러](https://book.naver.com/bookdb/book_detail.nhn?bid=16311029) 책을 보고 스터디/발표를 하기위한 자료를 업로드하는 레포지토리입니다.
 
 ## 진행방법
 ### 보통 Markdown형식으로 ReadMe.md를 작성해 진행합니다.
