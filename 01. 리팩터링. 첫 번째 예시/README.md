@@ -235,7 +235,7 @@ function playFor(aPerformance) {
   return plays[aPerformance.playID];
 }
 
-function amountFor(perf) {
+function amountFor(perf) { // 필요없는 매개변수 제거
   let thisAmount = 0;
 
   switch (playFor(perf.playID).type) {
@@ -264,20 +264,299 @@ for (let perf of invoice.performances) {
   if ("comedy" === playFor(perf).type)
     volumeCredits += Math.floor(perf.audience / 5);
 
-  result += ` ${playFor(perf).name}: ${format(thisAmount / 100)} (${
+  result += ` ${playFor(perf)/* thisAmount변수 인라인*/.name}: ${format(thisAmount / 100)} (${
     perf.audience
   }석)\n`;
-  totalAmount += amountFor(perf);
+  totalAmount += amountFor(perf); // 필요없는 매개변수 제거
 }
 ```
 
+### 적립 포인트 계산 코드 추출하기
+
+```TS
+function volumeCreditsFor(aPerformance) { // <---- 새로 추출한 함수
+	let result = 0;
+	result += Math.max(aPerformance.audience - 30, 0);
+	if ("comady" === playFor(aPerformance).type)
+		result += Math.floor(aPerformance.audience / 5);
+	return result;
+}
+```
+> 새로 추출한 함수
+
+```TS
+export default function statement(invoice: Invoice, plays: Plays) {
+  let totalAmount = 0;
+  let volumeCredits = 0;
+  let result = `청구내역 (고객명: ${invoice.customer})\n`;
+
+  const format = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+  }).format;
+
+  for (let perf of invoice.performances) {
+
+  	volumeCredits += volumeCreditsFor(perf); // <------ 추출한 함수를 이용해 값을 누적
+
+  	// 청구 내역을 출력한다.
+    result += `${playFor(perf).name} : ${format(amountFor(perf)/100)} (${perf.audience}석)\n`;
+    totalAmount += thisAmount;
+  }
+
+  result += `총액: ${format(totalAmount / 100)}\n`;
+  result += `적립 포인트: ${volumeCredits}점\n`;
+
+  return result;
+}
+```
+> statement() 함수
 
 
+### format 변수 재거하기
+임시 변수는 나중에 문제를 일으킬 수 있다. 임시 변수는 자신이 속한 루틴에서만 의미가 있어서 루틴이 길고 복잡해지기 쉽다.  
+
+```TS
+function format(aNumber) {
+	return new Intl.NumberFormat("en-US",{ style: "currency", currency: "USD", minimumFractionDigits: 2}).format(aNumber)
+}
+```
+
+```TS
+export default function statement(invoice: Invoice, plays: Plays) {
+  let totalAmount = 0;
+  let volumeCredits = 0;
+  let result = `청구내역 (고객명: ${invoice.customer})\n`;
+
+  for (let perf of invoice.performances) {
+
+  	volumeCredits += volumeCreditsFor(perf); // <------ 추출한 함수를 이용해 값을 누적
+
+  	// 청구 내역을 출력한다.
+    result += `${playFor(perf).name} : ${format(amountFor(perf)/100)} (${perf.audience}석)\n`;
+    totalAmount += thisAmount;
+  }
+
+  result += `총액: ${format(totalAmount / 100)}\n`; // <---- 임시 변수였던 format을 함수 호출로 대체
+  result += `적립 포인트: ${volumeCredits}점\n`;
+
+  return result;
+}
+```
+
+format이라는 이름이 맘에 들지 않는다.
+
+```TS
+function usd(aNumber) { // 이름 변경
+	return new Intl.NumberFormat("en-US",{ style: "currency", currency: "USD", minimumFractionDigits: 2}).format(aNumber/100 /* 단위 변환도 이 함수 안으로 이동*/)
+}
+```
+
+```TS
+export default function statement(invoice: Invoice, plays: Plays) {
+  let totalAmount = 0;
+  let volumeCredits = 0;
+  let result = `청구내역 (고객명: ${invoice.customer})\n`;
+
+  for (let perf of invoice.performances) {
+
+  	volumeCredits += volumeCreditsFor(perf);
+
+  	// 청구 내역을 출력한다.
+    result += `${playFor(perf).name} : ${usd(amountFor(perf))} (${perf.audience}석)\n`; // <- 함수 이름 변경
+    totalAmount += thisAmount;
+  }
+
+  result += `총액: ${usd(totalAmount)}\n`; // <- 함수 이름 변경
+  result += `적립 포인트: ${volumeCredits}점\n`;
+
+  return result;
+}
+```
+
+### volumeCredits 변수 제거하기
+volumeCredits 변수는 한 바퀴 돌 때마다 값을 누적하기 때문에 리팩터링하기가 더 까다롭다. 반복문 쪼개기로 누적되는 부분을 따로 뺸다.
+
+```TS
+export default function statement(invoice: Invoice, plays: Plays) {
+  let totalAmount = 0;
+  let volumeCredits = 0;
+  let result = `청구내역 (고객명: ${invoice.customer})\n`;
+
+  // for (let perf of invoice.performances) {
+
+  // 	volumeCredits += volumeCreditsFor(perf);
+
+  // 	// 청구 내역을 출력한다.
+  //   result += `${playFor(perf).name} : ${usd(amountFor(perf))} (${perf.audience}석)\n`;
+  //   totalAmount += thisAmount;
+  // }
+  for (let perf of invoice.performances) {
+
+  	// 청구 내역을 출력한다.
+  	result += ` ${playFor(perf).name}: ${usd(amountFor(perf))} (${perf.audience}석)\n`;
+  	totalAmount += amountFor(perf);
+  }
+  for (let perf of invoice.performances) { // 값 누적 로직을 별도 for문으로 분리
+  	volumeCredits += volumeCreditsFor(perf);
+  }
+
+  result += `총액: ${usd(totalAmount)}\n`;
+  result += `적립 포인트: ${volumeCredits}점\n`;
+
+  return result;
+}
+```
+
+이어서 문장 슬라이스하기(8.6)를 적용해서 volumeCredits 변수를 선언하는 문장을 반복문 바로 앞으로 옮긴다. 
 
 
+```TS
+export default function statement(invoice: Invoice, plays: Plays) {
+  let totalAmount = 0;
+  let result = `청구내역 (고객명: ${invoice.customer})\n`;
 
+  for (let perf of invoice.performances) {
 
+  	// 청구 내역을 출력한다.
+  	result += ` ${playFor(perf).name}: ${usd(amountFor(perf))} (${perf.audience}석)\n`;
+  	totalAmount += amountFor(perf);
+  }
+  let volumeCredits = 0; // 이동
+  for (let perf of invoice.performances) {
+  	volumeCredits += volumeCreditsFor(perf);
+  }
 
+  result += `총액: ${usd(totalAmount)}\n`;
+  result += `적립 포인트: ${volumeCredits}점\n`;
+
+  return result;
+}
+```
+  
+volumeCredits 값 갱신과 관련한 문장을 한데 모아두면 임시 변수를 질의 함수로 바꾸기(7.4)가 수월해 진다. 이번에도 volumeCredits값 계산 코드를 함수로 추출(6.1)하는 작업부터 한다.  
+
+```TS
+function totalVolumeCredits() {
+	let volumeCredits = 0;
+	for (let perf of invoice.performances) {
+		volumeCredits += volumeCreditsFor(perf);
+	}
+	return volumeCredits;
+}
+```
+
+```TS
+export default function statement(invoice: Invoice, plays: Plays) {
+  let totalAmount = 0;
+  let result = `청구내역 (고객명: ${invoice.customer})\n`;
+
+  for (let perf of invoice.performances) {
+
+  	// 청구 내역을 출력한다.
+  	result += ` ${playFor(perf).name}: ${usd(amountFor(perf))} (${perf.audience}석)\n`;
+  	totalAmount += amountFor(perf);
+  }
+  // let volumeCredits = 0;
+  // for (let perf of invoice.performances) {
+  // 	volumeCredits += volumeCreditsFor(perf);
+  // }
+  let volumeCredits = totalVolumeCredits(); // 값 계산 로직을 함수로 추출
+
+  result += `총액: ${usd(totalAmount)}\n`;
+  result += `적립 포인트: ${volumeCredits}점\n`;
+
+  return result;
+}
+```
+
+함수 추출이 끝났으면, 다음은 volumeCredits 변수를 인라인(6.4)할 차례다.
+
+```TS
+export default function statement(invoice: Invoice, plays: Plays) {
+  let totalAmount = 0;
+  let result = `청구내역 (고객명: ${invoice.customer})\n`;
+
+  for (let perf of invoice.performances) {
+
+  	// 청구 내역을 출력한다.
+  	result += ` ${playFor(perf).name}: ${usd(amountFor(perf))} (${perf.audience}석)\n`;
+  	totalAmount += amountFor(perf);
+  }
+
+  result += `총액: ${usd(totalAmount)}\n`;
+  result += `적립 포인트: ${totalVolumeCredits()}점\n`; // 변수 인라인
+
+  return result;
+}
+```
+
+> 반복문을 쪼개서 성능이 떨어진다? -> 아니다. 시간복잡도는 동일한 n을 가지게된다.
+  
+
+다음으로 total Amount도 앞에서와 똑같은 절차로 제거한다. 추출할 함수의 이름은 "totalAmount"가 가장 좋지만 이미 같은 이름의 변수가 있으니 아무 이름인 "appleSauce"를 붙여준다.
+
+```TS
+function appleSauce() {
+	let totalAmount = 0;
+	for (let perf of invoice.performances) {
+  		totalAmount += amountFor(perf);
+  	}
+  	return totalAmount
+}
+```
+
+```TS
+export default function statement(invoice: Invoice, plays: Plays) {
+  let totalAmount = 0;
+  let result = `청구내역 (고객명: ${invoice.customer})\n`;
+
+  for (let perf of invoice.performances) {
+
+  	// 청구 내역을 출력한다.
+  	result += ` ${playFor(perf).name}: ${usd(amountFor(perf))} (${perf.audience}석)\n`;
+  }
+  totalAmount = appleSauce(); // 함수 추출 & 임시 이름 부여
+
+  result += `총액: ${usd(totalAmount)}\n`;
+  result += `적립 포인트: ${totalVolumeCredits()}점\n`;
+
+  return result;
+}
+```
+
+  
+  
+이제 totalAmount 변수를 인라인한 다음, 함수 이름을 의미있게 고치자
+```TS
+export default function statement(invoice: Invoice, plays: Plays) {
+  let result = `청구내역 (고객명: ${invoice.customer})\n`;
+
+  for (let perf of invoice.performances) {
+
+  	// 청구 내역을 출력한다.
+  	result += ` ${playFor(perf).name}: ${usd(amountFor(perf))} (${perf.audience}석)\n`;
+  }
+
+  result += `총액: ${usd(totalAmount())}\n`; // 변수 인라인 후 이름 바꾸기
+  result += `적립 포인트: ${totalVolumeCredits()}점\n`;
+
+  return result;
+}
+```
+
+```TS
+function totalAmount() { // 함수 이름바꾸기
+	let result = 0; // 이름 바꾸기
+	for (let perf of invoice.performances) {
+  		result += amountFor(perf);
+  	}
+  	return result
+}
+```
+
+## 1.5 중간 점검: 난무하는 중첩 함수
 
 
 
