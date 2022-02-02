@@ -987,19 +987,353 @@ export default function createStatementData(invoice, plays) {
   }
 }
 ```
-> 어찌어찌 결과. 프로그래밍은 항시 코드벵;스를 작업시작 전보다 건강하게 만들어놓고 떠나야 한다.
+> 어찌어찌 결과. 프로그래밍은 항시 코드베이스를 작업시작 전보다 건강하게 만들어놓고 떠나야 한다.
 
 ## 1.8 다형성을 활용해 계산 코드 재구성하기
+이번에는 연극 장르를 추가하고 장르마다 공연료와 적립 포인트 계산법을 다르게 지정하도록 기능을 수정해본다.  
+이번 작업의 목표는 상속 계층을 구성해서 희극 서브 클래스와 비극 서브클래스가 각자의 구체적인 계산 로직을 정의하는 것이다.  
+조건부 로직을 다형성으로 바꾸기(10.4)를 이용해보자.  
 
+### 공연료 계산기 만들기
+todo) amountFor()와 volumeCreditsFor()를 전용 클래스로 옮기자
+```JS
+// createStatementData 함수
+function enrichPerformance(aPerformance) {
+    const calculator = new PerfomanceCalculator(aPerformance); // 공연료 계산기 생성
+    const result = Object.assign({}, aPerformance);
+    result.play = playFor(result);
+    result.amount = amountFor(result);
+    result.volumeCredits = volumeCreditsFor(result);
+    return result;
+  }
+```
+```JS
+class PerfomanceCalculator { // 공연료 계산기 클래스
+    constructor(aPerformance) {
+      this.performances = aPerformance
+  }
+}
+```
 
+이제 옮겨보도록 한다. 모든 데이터 변환을 한 곳에서 수행할 수 있으면 코드가 명확해진다. 이를 위해 계산기 클래스의 생성자에 함수 선언 바꾸기(6.5)를 적용하여 공연할 연극을 계산기로 전달한다.  
 
+```JS
+function enrichPerformance(aPerformance) {
+    const calculator = new PerfomanceCalculator(aPerformance, playFor(aPerformance)); // 공연 정보를 계산기로 전달
+    const result = Object.assign({}, aPerformance);
+    result.play = calculator.play;
+    result.amount = amountFor(result);
+    result.volumeCredits = volumeCreditsFor(result);
+    return result;
+  }
+```
+```JS
+  class PerfomanceCalculator {
+    constructor(aPerformance, aPlay) {
+      this.performances = aPerformance
+      this.Play = aPlay;
+    }
+  }
+```
 
+### 함수들을 계산기로 옮기기
+지금까지는 중첩 함수를 재배치하는 것이어서 함수를 옮기는 데 부담이 없었다. 하지만 이번에는 함수를 (모듈, 클래스등) 다른 컨텍스트로 옮기는 큰 작업이다. 그러니 이번엔 함수 옮기기(8.1) 리팩터링으로 작업을 단계별로 차근차근 진행해보자.  
 
+```JS
+class PerfomanceCalculator {
+  constructor(aPerformance, aPlay) {
+    this.performances = aPerformance
+    this.Play = aPlay;
+  }
 
+  get amount() { // amountFor() 함수의 코드를 계산기 클래스로 복사
+    let result = 0;
+    switch (this.play.type) { // amountFor()함수가 매개변수로 받던 정보를 계산기 필드에서 바로 얻음
+      case "tragedy":
+        result = 40000;
+        if (aPerformance.audience > 30) {
+          result += 1000 * (aPerformance.audience - 30);
+        }
+        break;
+      case "comedy":
+        result = 30000;
+        if (aPerformance.audience > 20) {
+          result += 10000 + 500 * (aPerformance.audience - 20);
+        }
+        result += 300 * aPerformance.audience;
+        break;
+      default:
+        throw new Error(`알 수 없는 장르 : ${aPerformance.play.type}`);
+    }
+    return result;
+  }
+}
+```
 
+```JS
+function amountFor(aPerformance) {
+    // let result = 0;
+    // switch (aPerformance.play.type) {
+    //   case "tragedy":
+    //     result = 40000;
+    //     if (aPerformance.audience > 30) {
+    //       result += 1000 * (aPerformance.audience - 30);
+    //     }
+    //     break;
+    //   case "comedy":
+    //     result = 30000;
+    //     if (aPerformance.audience > 20) {
+    //       result += 10000 + 500 * (aPerformance.audience - 20);
+    //     }
+    //     result += 300 * aPerformance.audience;
+    //     break;
+    //   default:
+    //     throw new Error(`알 수 없는 장르 : ${aPerformance.play.type}`);
+    // }
+    // return result;
+    return new PerfomanceCalculator(aPerformance, playFor(aPerformance)).amount // 원본 함수인 amountFor()도 계산기를 이용하도록 수정
+  }
+```
 
+```JS
+function enrichPerformance(aPerformance) {
+    const calculator = new PerfomanceCalculator(aPerformance, playFor(aPerformance));
+    const result = Object.assign({}, aPerformance);
+    result.play = calculator.play;
+    result.amount = calculator.amount; // amount()대신 계산기의 함수 이용
+    result.volumeCredits = volumeCreditsFor(result);
+    return result;
+  }
+```
+> 함수 인라인  
 
+volumeCredits도 이사 가도록 변경
+```JS
+function enrichPerformance(aPerformance) {
+    const calculator = new PerfomanceCalculator(aPerformance, playFor(aPerformance));
+    const result = Object.assign({}, aPerformance);
+    result.play = calculator.play;
+    result.amount = calculator.amount;
+    result.volumeCredits = calculator.volumeCredits; // 적립포인트도 이동시키자.
+    return result;
+  }
+```
 
+```JS
+class PerfomanceCalculator { 
+  ...
+  get volumeCredits() {
+    let result = 0;
+    result += Math.max(aPerformance.audience - 30, 0);
+    if ("comedy" === aPerformance.play.type) {
+      result += Math.floor(aPerformance.audience / 5);
+    }
+    return result;
+  }
+}
+```
+
+```JS
+function createStatementData(invoice, plays) {
+  ...
+  function volumeCreditsFor(aPerformance) {
+    // let result = 0;
+    // result += Math.max(aPerformance.audience - 30, 0);
+    // if ("comedy" === aPerformance.play.type) {
+    //   result += Math.floor(aPerformance.audience / 5);
+    // }
+    // return result;
+    return new PerfomanceCalculator(aPerformance, playFor(aPerformance)).volumeCredits
+  }
+}
+```
+
+### 공연료 계산기를 다형성 버전으로 만들기
+클래스에 로직을 담았으니 이제 다형성을 지원하자.  
+가장 먼저 할 일은 타입 코드 대신 서브 클래스를 사용하도록 변경하는 것이다(타입 코드를 서브 클래스로 바꾸기(12.6))  
+생성자를 팩터리 함수로 바꾸기(11.8)을 적용할 예정  
+
+```JS
+export default function createStatementData(invoice, plays) {
+  ...
+  function enrichPerformance(aPerformance) {
+    // const calculator = new PerfomanceCalculator(aPerformance, playFor(aPerformance));
+    const calculator = createPerformanceCalculator(aPerformance, playFor(aPerformance)); // 생성자 대신 팩터리 함수 이용
+    const result = Object.assign({}, aPerformance);
+    result.play = calculator.play;
+    result.amount = calculator.amount;
+    result.volumeCredits = calculator.volumeCredits;
+    return result;
+  }
+```
+
+```JS
+// 최상위
+function createPerfomanceCalculator(aPerformance, aPlay) {
+  return new PerfomanceCalculator(aPerformance, aPlay);
+}
+```
+
+함수를 이용하면 다음과 같이 PerformanceCalculator의 서브클래스 중에서 어느 것을 생성해서 반환할지 선택할 수 있다. 
+
+```JS
+function createPerfomanceCalculator(aPerformance, aPlay) {
+    switch(aPlay.type) {
+      case 'tragedy': return new TragedyCalculator(aPerformance, aPlay);
+      case 'comdey': return new ComedyCalculator(aPerformance, aPlay);
+      default:
+       throw new Error('알 수 없는 장르: ${aPlay.type}');
+    }
+}
+
+class TragedyCalculator extends PerfomanceCalculator {
+}
+
+class ComedyCalculator extends PerfomanceCalculator {
+}
+```
+
+이제 다형성을 지원하기 위한 구조는 갖춰졌다. 다음은 조건부로직을 다형성으로 바꾸기(10.4)를 적용할 차례다.  
+  
+비극 공연의 공연료 계산부터 해보자.  
+
+```JS
+class TragedyCalculator extends PerfomanceCalculator {
+  get amount() {
+    let result = 40000;
+    if (this.performance.audience > 30) {
+      result += 1000 * (this.performance.audience - 30);
+    }
+    return result;
+  }
+}
+```
+> 이 메서드만 정의해도 오버라이드가 된다.
+
+```JS
+class PerfomanceCalculator {
+  constructor(aPerformance, aPlay) {
+    this.performances = aPerformance
+    this.Play = aPlay;
+  }
+
+  get amount() { 
+    let result = 0;
+    switch (this.play.type) {
+      case "tragedy":
+        throw '오류 발생'; // 비극 공연료는 TragedyCalulator를 이용하도록 유도
+      case "comedy":
+        result = 30000;
+        if (aPerformance.audience > 20) {
+          result += 10000 + 500 * (aPerformance.audience - 20);
+        }
+        result += 300 * aPerformance.audience;
+        break;
+      default:
+        throw new Error(`알 수 없는 장르 : ${aPerformance.play.type}`);
+    }
+    return result;
+  }
+}
+```
+
+## 1.9 상태 점검: 다형성을 활용하여 데이터 생성하기
+
+```JS
+export default function createStatementData(invoice, plays) {
+  const result = {};
+  result.customer = invoice.customer;
+  result.performances = invoice.performances.map(enrichPerformance);
+  result.totalAmount = totalAmount(result);
+  result.totalVolumeCredits = totalVolumeCredits(result);
+  return result;
+
+  function enrichPerformance(aPerformance) {
+    const calculator = createPerformanceCalculator(aPerformance, playFor(aPerformance));
+    const result = Object.assign({}, aPerformance);
+    result.play = calculator.play;
+    result.amount = calculator.amount;
+    result.volumeCredits = calculator.volumeCredits;
+    return result;
+  }
+
+  function playFor(aPerformance) {
+    return plays[aPerformance.playID];
+  }
+
+  function totalAmount(data) {
+    return data.performances.reduce((total, p) => total + p.amount, 0);
+  }
+
+  function totalVolumeCredits(data) {
+    return data.performances.reduce((total, p) => total + p.volumeCredits, 0);
+  }
+
+  function amountFor(aPerformance) {
+    return new PerfomanceCalculator(aPerformance, playFor(aPerformance)).amount
+  }
+
+  function volumeCreditsFor(aPerformance) {
+    return new PerfomanceCalculator(aPerformance, playFor(aPerformance)).volumeCredits
+  }
+}
+```
+```JS
+class PerfomanceCalculator {
+  constructor(aPerformance, aPlay) {
+    this.performances = aPerformance
+    this.Play = aPlay;
+  }
+
+  get amount() {
+    throw '서브클래스에서 생성하도록 설계됨';
+  }
+
+  get volumeCredits() {
+    let result = 0;
+    result += Math.max(aPerformance.audience - 30, 0);
+    if ("comedy" === aPerformance.play.type) {
+      result += Math.floor(aPerformance.audience / 5);
+    }
+    return result;
+  }
+}
+```
+```JS
+function createPerfomanceCalculator(aPerformance, aPlay) {
+    switch(aPlay.type) {
+      case 'tragedy': return new TragedyCalculator(aPerformance, aPlay);
+      case 'comdey': return new ComedyCalculator(aPerformance, aPlay);
+      default:
+       throw new Error('알 수 없는 장르: ${aPlay.type}');
+    }
+}
+
+class TragedyCalculator extends PerfomanceCalculator {
+  get amount() {
+    let result = 40000;
+    if (this.performance.audience > 30) {
+      result += 1000 * (this.performance.audience - 30);
+    }
+    return result;
+  }
+}
+
+class ComedyCalculator extends PerfomanceCalculator {
+  get amount() {
+    result = 30000;
+    if (aPerformance.audience > 20) {
+      result += 10000 + 500 * (aPerformance.audience - 20);
+    }
+    result += 300 * aPerformance.audience;
+    return result;
+  }
+}
+```
+
+> 이제 다형성을 지원한다!
+
+# 좋은 코드를 가늠하는 확실한 방법은 '얼마나 수정하기 쉬운가'다. 
 
 
 
