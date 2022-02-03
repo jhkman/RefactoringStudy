@@ -8,9 +8,22 @@ function createPerfomanceCalculator(aPerformance, aPlay) {
 }
 
 class TragedyCalculator extends PerfomanceCalculator {
-
+  get amount() {
+    let result = 40000;
+    if (this.performance.audience > 30) {
+      result += 1000 * (this.performance.audience - 30);
+    }
+    return result;
+  }
 }
 
 class ComedyCalculator extends PerfomanceCalculator {
-  
+  get amount() {
+    result = 30000;
+    if (aPerformance.audience > 20) {
+      result += 10000 + 500 * (aPerformance.audience - 20);
+    }
+    result += 300 * aPerformance.audience;
+    return result;
+  }
 }
