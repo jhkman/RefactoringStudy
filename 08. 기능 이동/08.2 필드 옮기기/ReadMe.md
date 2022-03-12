@@ -57,7 +57,7 @@ class Customer {
 ```JS
 class CustomerContract {
 	constructor(startDate) {
-		this._startData = startDate
+		this._startDate = startDate
 	}
 }
 ```
@@ -95,7 +95,7 @@ class Customer {
 class CustomerContract {
 	// constructor(startDate) {
 	constructor(startDate, discountRate) {
-		this._startData = startDate
+		this._startDate = startDate
 		this._discountRate = discountRate // 추가
 	}
 
