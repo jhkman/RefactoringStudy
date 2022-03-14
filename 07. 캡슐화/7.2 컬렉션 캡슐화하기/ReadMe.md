@@ -28,3 +28,58 @@ class Person{
 ### 효과
 1. 컬렉션 원본을 외부에서 직접 변경할 수 없도록 하는 리팩터링 하며, 모듈 밖에서 컬렉션이 수정되어 발생하는 문제를 예방할수 있다.
 2. 중요한 점은 코드베이스에서 컬렉션 접근 함수의 처리 방식이 통일되도록 해야 한다.
+
+### 예시
+> 수업목록(course)을 필드로 지니고 있는 Person 클래스를 예로 들어보자
+```JS
+class Person{
+  constructor(name){
+    this._name = name;
+    this._courses = [];
+  }
+  
+  get name() {return this._name;}
+  get courses() {return this._courses}
+  set courses(aList) {this._courses = aList;}
+}
+
+class Courses{
+  constructor(name){
+    this._name = name;
+    this._isAdvanced = [];
+  }
+  get name() {return this._name;}
+  get isAdvanced() {return this._isAdvanced;}
+}
+```
+클라이언트는 Person이 제공하는 수업컬렉션에서 수업정보를 얻는다.
+```JS
+numAdvancedCourses = aPerson.courses
+  .filter(c => c.isAdvanced)
+  .length;
+```
+
+2. 클라이언트가 수업을 하나씩 추가하고 제거하는 메서드를 Person에 추가해보자
+```JS
+class Person{
+  ...
+  addCourse(aCourse){
+    this._couses.push(aCourses);
+  }
+  
+  removeCourses(aCourses, fnIfAbsent = () => {throw new RangeError();}){
+    const index = this._courses.indexOf(aCourse);
+    if(index === -1) fnIfAbsent();
+    else this._cousrses.splice(index, 1);
+  }
+}
+```
+
+4. 그 후 컬렉션의 변경자를 직접 호출하는 코드를 방금 추가한 메서드를 사용하도록 변경한다.
+```JS
+for(const name of readBasicCourseNames(filename)){
+  aPerson,addCourse(new Course(name, false))
+}
+```
+
+2. 위와같이 개별원소를 추가하고 제거하는 메서드를 제공하기에 setCourses()룰 사용할 일이 없어졌으니 제거한다.
