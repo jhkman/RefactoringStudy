@@ -31,72 +31,7 @@ class organization{
 7. 테스트한다.
 8. 레코드의 필드도 데이터 구조인 중첩 구조라면 레코드 캡슐화하기와 컬렉션 캡슐화하기를 재귀적으로 적용한다.
 
-### ex) 간단한 레코드 캡슐화하기
-프로그램 전체에서 널리 사용되는 상수를 예로 살펴보자.
-```JS
-const organization = {name: "에크미 구스베리", country: "GB"}
-```
-프로그램 곳곳에서 레코드 구조로 사용하는 자바스크립트 객체로서, 다음과 같이 읽고 쓴다.
-```JS
-result += '<h1>${organization.name}</h1>';    //읽기 예
-organization.name = newName;                  //쓰기 예
-```
-1. 이 상수를 캡슐화해보자
-```JS
-function getRawDataOfOrganization() {return organization;}
-
-//읽고 쓰기는 다음처럼 바뀐다.
-result += '<h1>${getRawDataOfOrganization().name}</h1>';    //읽기 예
-getRawDataOfOrganization.name = newName;                    //쓰기 예
-```
-2. 레코드를 클래스로 바꾸고
-4. 새 클래스의 인스턴스를 반환하는 함수를 새로 만든다.
-
-```JS
-//Organization 클래스
-class Organization{
-  constructor(data){
-    this._data = data;
-  }
-}
-
-//최상위..
-const organization = new Organization({name: "에크미 구스베리", country: "GB"});
-function getRawDataOfOrganization() {return organization._data;}
-function getOrganization() {return organization;}
-```
-
-5. 레코드를 갱신하던 코드는 모두 세터를 사용하도록 고친다. 마찬가지로 레코드를 읽는 코드는 모두 게터를 사용하게 바꾼다.
-```JS
-//Organization 클래스
-set name(aString) {this._data.name = aString;}
-get name() {return this._data.name;}
-
-//클라이언트..
-get name() {return this._data.name;}
-result += '<h1>${getOrganization().name}</h1>';
-```
-
-6. 다 바꿨다면 앞에서 이상한 이름으로 지었던 임시 함수를 제거한다.
-```JS
-//function getRawDataOfOrganization() {return organization._data;}
-function getOrganization() {return organization;}
-```
-마지막으로 _data의 필드들을 객체 안에 바로 펼쳐놓으면 더 깔끔할것 같다.
-```JS
-//Organization 클래스
-class Organization{
-  constructor(data){
-    this._name = data.name;
-    this._country = data.country;
-  }
-  
-  get name()  {return this._name;}
-  set name(arg)  {this._name = arg;}
-  get country()  {return this._country;}
-  set country(arg)  {this._country = arg;}
-}
-```
-이렇게 하면 입력 데이터 레코드와의 연결을 끊어준다는 이점이 생긴다. 특히 이 레코드를 참조하여 캡슐화를 꺨 우려가 있는 코드가 많을 때 좋다.
-
-### ex) 중첩된 레코드 캡슐화하기
+### 효과
+1. 기존 코드를 클래스로 캡슐화하면서 입력 받는 데이터와의 직접적인 참조를 끊는다는 이점이 생긴다. 특히 이 레코드를 참조하여 캡슐화를 꺨 우려가 있는 코드가 많을 때 좋다.
+2. _name, _country 로 접근하는 것이 아닌 get method를 통하여 name,country 접근 private #처리를 해주면 더욱 좋다.
+3. 캡슐화를 했기 때문에 클래스 내부에서 어떠한 작업을 하는지 모르는채 우리는 그저 메소드만 사용하면 원하는 값을 가져올 수 있다는 장점이 있다.
