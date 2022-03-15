@@ -21,3 +21,49 @@ orders.filter(o => o.priority.higherThan(new Priority("normal")))
 
 ### 효과
 1. 시작은 기본형 데이터를 감싼 것과 큰 차이가 없으나 나중에 특별한 동작이 필요해지면 유용한 도구가 될수 있다.
+
+### 예시
+```JS
+//Order 클래스
+constructor(data){
+  this.priority = data.priority;
+  //나머지 초기화 코드 생략
+}
+
+//클라이언트에서 사용
+highPriorityCount = orders.filter(o => "high" === o.priority
+                                    || "rush" === o.priority).length;
+```
+1. 변수를 캡슐화한다.
+2. 
+```JS
+//Order 클래스
+get priority() {return this._priority;}
+set priority(aString) {this._priority = aString;}
+//나머지 캡슐화 코드 생략
+```
+2. 우선순위 속성을 표현하는 값 클래스 Priority를 만든다.
+```JS
+Class Priority{
+  constructor(value){
+    this._value = value;
+  }
+  toString() {return this._value;}
+}
+```
+4. 그 후 방금만든 Priority 클래스를 사용하도록 접근자들을 수정한다.
+```JS
+//Order 클래스
+get priority() {return this._priority.toString();}
+set priority(aString) {this._priority = new Priority(aString);}
+```
+7. Priority 클래스를 만들고 나면 Order 클래스의 게터가 이상해진다. 게터가 반환하는 값은 우선순위가 아니라 우선순위를 표현하는 문자열이기에 함수이름을 바꾸어준다.
+```JS
+//Order 클래스
+get priorityString() {return this._priority.toString();}
+set priority(aString) {this._priority = new Priority(aString);}
+
+//클라이언트에서 사용
+highPriorityCount = orders.filter(o => "high" === o.priorityString
+                                    || "rush" === o.priorityString).length;
+```
