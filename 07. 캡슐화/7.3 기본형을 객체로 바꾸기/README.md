@@ -35,14 +35,13 @@ highPriorityCount = orders.filter(o => "high" === o.priority
                                     || "rush" === o.priority).length;
 ```
 1. 변수를 캡슐화한다.
-2. 
 ```JS
 //Order 클래스
 get priority() {return this._priority;}
 set priority(aString) {this._priority = aString;}
 //나머지 캡슐화 코드 생략
 ```
-2. 우선순위 속성을 표현하는 값 클래스 Priority를 만든다.
+2. 우선순위 속성을 표현하는 값 클래스 Priority를 만든다. 표현할 값을 받는 생성자와 그 값을 문자열로 반환하는 변환함수로 구성된다.
 ```JS
 Class Priority{
   constructor(value){
