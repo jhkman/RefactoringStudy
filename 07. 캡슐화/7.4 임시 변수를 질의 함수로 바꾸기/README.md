@@ -34,3 +34,63 @@ else
 1. 비슷한 계산 처리를 재 사용할 수 있어 코드 중복이 줄어든다.
 2. 코드간에 부자연스러운 의존관계나 부수효과를 찾아내어 제거할 수 있다.
 3. 함수를 추출해서 사용하면 변수를 따로 전달할 필요가 없어지고, 원래 함수의 와의 경계성도 더 분명해진다. 이런 리팩토링은 특히 클래스 형태일때 효과가 가장 크다.
+
+### 예시
+```JS
+//Order 클래스
+constructor(quantity, item){
+  this._quantity = data.quantity;
+  this._item = data.item;
+}
+
+get price(){
+    var basePrice = this._quantity * this._item.price;
+    var discounterFactor = 0.98;
+    
+    if(basePrice > 1000) discounterFactor -= 0.03;
+    return basePrice * discounterFactor;
+}
+```
+임시변수인 basePrice와 discounterFactor를 메서드로 변경하자.
+2. basePrice에 const를 붙여 읽기 전용으로 만들고 테스트해본다.
+```JS
+//Order 클래스
+constructor(quantity, item){
+  this._quantity = data.quantity;
+  this._item = data.item;
+}
+
+get price(){
+    const basePrice = this._quantity * this._item.price;
+    var discounterFactor = 0.98;
+    
+    if(basePrice > 1000) discounterFactor -= 0.03;
+    return basePrice * discounterFactor;
+}
+```
+4. 그후 대입문의 우변을 게터로 추출한다.
+```JS
+get price(){
+    const basePrice = this.basePrice;
+    var discounterFactor = 0.98;
+    
+    if(basePrice > 1000) discounterFactor -= 0.03;
+    return basePrice * discounterFactor;
+}
+
+get basePrice(){
+    return this._quantity * this._item.price;
+}
+
+```
+6. 테스트 후 변수를 인라인 한다.
+```JS
+get price(){
+    //const basePrice = this.basePrice;
+    var discounterFactor = 0.98;
+    
+    if(this.basePrice > 1000) discounterFactor -= 0.03;
+    return this.basePrice * discounterFactor;
+}
+```
+
