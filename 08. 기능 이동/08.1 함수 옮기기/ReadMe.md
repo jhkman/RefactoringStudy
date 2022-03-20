@@ -288,12 +288,7 @@ class Account {
 1. overdraftCharge() 메서드가 사용하는 기능을 살표보고 옮길만한 가치가 있나 고민해보자.  
 3. 다음으로 overdraftCharge() 메서드 본문을 AccountType 클래스로 복사한 후 새 보금자리에 맞게 정리한다.
 ```JS
-class Account {
-	get bankCharge() {
-		let result = 4.5
-		if (this._daysOverdrawn > 0) result += this.overdraftChange
-			return result
-	}
+class AccountType {
 
 	// get overdraftChange() {
 	get overdraftChange(daysOverdrawn) {
@@ -316,12 +311,7 @@ class Account {
 
 -> 
 ```JS
-class Account {
-	get bankCharge() {
-		let result = 4.5
-		if (this._daysOverdrawn > 0) result += this.overdraftChange
-			return result
-	}
+class AccountType {
 
 	get overdraftChange(daysOverdrawn) {
 		// if (this.isPremium) {
