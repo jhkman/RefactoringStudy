@@ -311,7 +311,7 @@ class AccountType {
 
 -> 
 ```JS
-class AccountType {
+class Account {
 
 	get overdraftChange(daysOverdrawn) {
 		// if (this.isPremium) {
