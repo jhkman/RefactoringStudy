@@ -251,20 +251,374 @@ class Client4 {
 ```
 8. 계속해서 모든 클라이언트의 코드를 이 다형적 행위로 대체할 수 있는지를 살펴본다. 
 
+### 예시: 객체 리터럴 이용하기
+데이터 구조를 읽기만 한다면 클래스 대신 리터럴 객체를 사용해도 된다.
 
+```JS
+class Site {
+	get customer() { return this._customer }
+}
 
+class Customer {
+	get name() {...} // 고객 이름
+	get billingPlan() {...} // 요금제
+	set billingPlan(arg) {...}
+	get paymentHistory() {...} // 납부 이력
+}
 
+class Client1 {
+	const aCustomer = site.customer
+	// ...  수 많은 코드들
+	let customerName
+	if (aCustomer === "미확인 고객") 
+		customerName = "거주자"
+	else 
+		customerName = aCustomer.name
+}
 
+class Client2 {
+	const plan = (aCustomer === "미확인 고객") ? registry.billingPlan.basic : aCustomer.billingPlan
+}
 
+class Client3 {
+	const weeksDelinquent = (aCustomer === "미확인 고객") ? 0 : aCustomer.paymentHistory.weekDelinquentInLastYear
+}
+```
+1. 앞의 예와 같이, 먼저 고객에 isUnknown()속성을 추가하고 2. 이 필드를 포함하는 특이 케이스 객체를 생성한다. 차이점이라면 이번에는 특이케이스가 리터럴이다.
 
+```JS
+class Site {
+	get customer() { return this._customer }
+	get isUnknown() { return false }
+}
 
+class 최상위클래스 {
+	function createUnknownCustomer() {
+		return {
+			isUnknown: true, 
+		}
+	}
+}
+```
+3. 특이 케이스 조건 검사 부분을 함수로 추출한다. 
+```JS
+function isUnknown(arg) {
+	return (arg === "미확인 고객")
+}
 
+class Client1 {
+	const aCustomer = site.customer
+	// ...  수 많은 코드들
+	let customerName
+	// if (aCustomer === "미확인 고객") 
+	if (isUnknown(aCustomer))
+		customerName = "거주자"
+	else 
+		customerName = aCustomer.name
+}
 
+class Client2 {
+	// const plan = (aCustomer === "미확인 고객") ? registry.billingPlan.basic : aCustomer.billingPlan
+	const plan = (isUnknown(aCustomer)) ? registry.billingPlan.basic : aCustomer.billingPlan
+}
 
+class Client3 {
+	// const weeksDelinquent = (aCustomer === "미확인 고객") ? 0 : aCustomer.paymentHistory.weekDelinquentInLastYear
+	if (isUnknown(aCustomer)) ? 0 : aCustomer.paymentHistory.weekDelinquentInLastYear
+}
+```
+4. 조건을 검사하는 코드와 Site클래스에서 이 특이 케이스를 이용하도록 수정한다.
+```JS
+class Site {
+	// get customer() { return this._customer }
+	get customer() {
+		return (aCustomer === "미확인 고객") ? createUnknownCustomer() : this._customer
+	}
+	get isUnknown() { return false }
+}
 
+class 최상위클래스 {
+	function createUnknownCustomer() {
+		return {
+			isUnknown: true, 
+		}
+	}
 
+	function isUnknown(arg) {
+		return arg.isUnknown
+	}
+}
+```
+7. 다음으로 각각의 표준 응답을 적절한 리터럴 값으로 대체한다. 이름부터 해보자.
+```JS
+class 최상위클래스 {
+	function createUnknownCustomer() {
+		return {
+			isUnknown: true, 
+			name: "거주자", // 추가
+		}
+	}
 
+	function isUnknown(arg) {
+		return arg.isUnknown
+	}
+}
 
+class Client1 {
+	const aCustomer = site.customer
+	// ...  수 많은 코드들
+	// let customerName
+	// if (isUnknown(aCustomer))
+	// 	customerName = "거주자"
+	// else 
+	// 	customerName = aCustomer.name
+	const customerName = aCustomer.name
+}
+```
+다음은 요금제 차례다
+
+```JS
+class 최상위클래스 {
+	function createUnknownCustomer() {
+		return {
+			isUnknown: true, 
+			name: "거주자",
+			billingPlan: registry.billingPlan.basic, // 추가
+		}
+	}
+
+	function isUnknown(arg) {
+		return arg.isUnknown
+	}
+}
+
+class Client2 {
+	// const plan = (isUnknown(aCustomer)) ? registry.billingPlan.basic : aCustomer.billingPlan
+	const plan = aCustomer.billingPlan
+}
+```
+비슷한 방법으로 납부 이력이 없다는 정보는 중첩 리터럴로 생성한다.
+
+```JS
+class 최상위클래스 {
+	function createUnknownCustomer() {
+		return {
+			isUnknown: true, 
+			name: "거주자",
+			billingPlan: registry.billingPlan.basic,
+			paymentHistory: {
+				weekDelinquentInLastYear: 0
+			}
+		}
+	}
+
+	function isUnknown(arg) {
+		return arg.isUnknown
+	}
+}
+
+class Client3 {
+	// if (isUnknown(aCustomer)) ? 0 : aCustomer.paymentHistory.weekDelinquentInLastYear
+	const weeksDelinquent = aCustomer.paymentHistory.weekDelinquentInLastYear
+}
+```
+#### 리터럴?
+[링크](https://velog.io/@pjeeyoung/%EB%A6%AC%ED%84%B0%EB%9F%B4)
+
+### 예시: 변환 함수 이용하기
+입력이 다음처럼 단순한 레코드 구조라고 가정하자(JSON문서)
+```JS
+{
+	name: "애크미 보스턴",
+	location: "Malden MA",
+	// 더 많은 현장 정보
+	customer: {
+		name: "애크미 산업",
+		billingPlan: "plan-451",
+		paymentHistory: {
+			weekDelinquentInLastYear: 7
+			// 중략
+		},
+		// 중략
+	}
+}
+```
+고객이 알려지지 않은경우는 미확인고객 으로 표시
+```JS
+{
+	name: "물류창고 15",
+	location: "Malden MA",
+	// 더 많은 현장정보
+	customer: "미확인 고객"
+}
+```
+미확인 고객 검사 코드
+```JS
+class Client1 {
+	const site = acuireSiteData()
+	const aCustomer = site.customer
+	// ... 수 많은 코드 ...
+	let customerName
+	if (aCustomer === "미확인 고객")
+		customerName = "거주자"
+	else 
+		customerName = aCustomer.name
+}
+
+class Client2 {
+	const plan = (aCustomer === "미확인 고객") ? registry.billingPlan.basic : aCustomer.billingPlan
+}
+
+class Client3 {
+	const weeksDelinquent = (aCustomer === "미확인 고객") ? 0 : aCustomer.paymentHistory.weekDelinquentInLastYear
+}
+
+```
+처음 할 일은 현장 데이터구조를 변환 함수인 enrichSite()에 통과시키는것이다. enrichSite()는 단순 Deep Copy해주는 메서드임
+
+```JS
+class Client1 {
+	const rawSite = acuireSiteData() // 추가
+	const site = enrichSite(rawSite)
+	// const site = acuireSiteData()
+	const aCustomer = site.customer
+	// ... 수 많은 코드 ...
+	let customerName
+	if (aCustomer === "미확인 고객")
+		customerName = "거주자"
+	else 
+		customerName = aCustomer.name
+
+	function enrichSite(inputSite) {
+		return _.cloneDeep(inputSite)
+	}
+}
+```
+3. 알려지지 않은 고객인지 검사하는 로직을 함수로 추출
+```JS
+function isUnknown(aCustomer) {
+	return aCustomer === "미확인 고객"
+}
+
+class Client1 {
+	const rawSite = acuireSiteData()
+	const site = enrichSite(rawSite)
+	const aCustomer = site.customer
+	// ... 수 많은 코드 ...
+	let customerName
+	// if (aCustomer === "미확인 고객")
+	if (isUnknown(aCustomer))
+		customerName = "거주자"
+	else 
+		customerName = aCustomer.name
+
+	function enrichSite(inputSite) {
+		return _.cloneDeep(inputSite)
+	}
+}
+
+class Client2 {
+	// const plan = (aCustomer === "미확인 고객") ? registry.billingPlan.basic : aCustomer.billingPlan
+	const plan = (isUnknown(aCustomer)) ? registry.billingPlan.basic : aCustomer.billingPlan
+}
+
+class Client3 {
+	// const weeksDelinquent = (aCustomer === "미확인 고객") ? 0 : aCustomer.paymentHistory.weekDelinquentInLastYear
+	const weeksDelinquent = (isUnknown(aCustomer)) ? 0 : aCustomer.paymentHistory.weekDelinquentInLastYear
+}
+```
+1,2 고객레코드에 isUnknown() 속성을 추가하여 현장 정보를 보강(enrich)한다.
+```JS
+// function enrichSite(inputSite) {
+// 	return _.cloneDeep(inputSite)
+// }
+function enrichSite(inputSite) {
+	const result = _.cloneDeep(inputSite)
+	const unknownCustomer = {
+		isUnknown: true
+	}
+
+	if (isUnknown(result.customer)) 
+		result.customer = unknownCustomer
+	else 
+		result.customer.isUnknown = false
+	return result
+}
+```
+5. 그런 다음 특이 케이스 검사 시 새로운 속성을 이용하도록 수정한다.
+```JS
+function isUnknown(aCustomer) {
+	// return aCustomer === "미확인 고객"
+	if (aCustomer === "미확인 고객")
+		return true
+	else 
+		return aCustomer.isUnknown
+}
+```
+6. 모든 기능이 잘되는지 테스트해보고 7. 특이 케이스에 여러 함수를 변환 함수로 묶기를 적용한다.
+```JS
+function enrichSite(inputSite) {
+	const result = _.cloneDeep(inputSite)
+	const unknownCustomer = {
+		isUnknown: true,
+		name: "거주자", // 추가
+	}
+
+	if (isUnknown(result.customer)) 
+		result.customer = unknownCustomer
+	else 
+		result.customer.isUnknown = false
+	return result
+}
+
+class Client1 {
+	const rawSite = acuireSiteData()
+	const site = enrichSite(rawSite)
+	const aCustomer = site.customer
+	// ... 수 많은 코드 ...
+	// let customerName
+	// if (isUnknown(aCustomer))
+	// 	customerName = "거주자"
+	// else 
+	// 	customerName = aCustomer.name
+	const customerName = aCustomer.name
+
+	function enrichSite(inputSite) {
+		return _.cloneDeep(inputSite)
+	}
+}
+```
+테스트후 요금제, 마지막 클라이언트를 수정해주자.
+```JS
+function enrichSite(inputSite) {
+	const result = _.cloneDeep(inputSite)
+	const unknownCustomer = {
+		isUnknown: true,
+		name: "거주자",
+		billingPlan: registry.billingPlan.basic, // 추가
+		paymentHistory: { // 추가
+			weekDelinquentInLastYear: 0
+		}
+	}
+
+	if (isUnknown(result.customer)) 
+		result.customer = unknownCustomer
+	else 
+		result.customer.isUnknown = false
+	return result
+}
+
+class Client2 {
+	// const plan = (isUnknown(aCustomer)) ? registry.billingPlan.basic : aCustomer.billingPlan
+	const plan = aCustomer.billingPlan
+}
+
+class Client3 {
+	// const weeksDelinquent = (isUnknown(aCustomer)) ? 0 : aCustomer.paymentHistory.weekDelinquentInLastYear
+	const weeksDelinquent = aCustomer.paymentHistory.weekDelinquentInLastYear
+}
+
+```
 
 
 
