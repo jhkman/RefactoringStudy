@@ -4,6 +4,7 @@
 let customer = newCustomer(customerData);
 ```
 ->
+```JS
 let customer = customerRepository.get(customerData.id);
 ```
 
