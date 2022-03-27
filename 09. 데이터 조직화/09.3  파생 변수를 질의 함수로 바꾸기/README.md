@@ -37,7 +37,49 @@ applyAdjustment(anAdjustment){
   this._production += adnAdjustment.amount;
 }
 ```
+이 코드는 조정값 adjustment를 적용하는 과정에서 직접 관련이 없는 누적 값 production까지 갱신했다.  
+이 누적값을 매번 갱신하지 않고도 계산할수 있도록 수정해보자
 
+```JS
+//ProductionPlan 클래스
+get production() {
+  assert(this._production === this.calculatedProduction);   //어서션을 추가하여 테스트해본다.
+  return this._production;
+}
+
+get calculatedProduction(){
+  return this._adjustments
+    .reduce((sum, a) => sum + a.amount, 0);
+}
+```
+어서션이 실패하지 않으면 코드를 수정하여 계산 결과를 직접 반환하도록 한다.
+```JS
+//ProductionPlan 클래스
+get production() {
+  return this.calculatedProduction;
+}
+```
+그 후 calculatedProduction() 메서드를 인라인 한다.
+```JS
+//ProductionPlan 클래스
+get production() {
+  return this._adjustments
+    .reduce((sum, a) => sum + a.amount, 0);
+}
+```
+마지막으로 옛 변수를 참조하는 모든 코드를 제거하여 정리한다.
+```JS
+//ProductionPlan 클래스
+get production() {
+  return this._adjustments
+    .reduce((sum, a) => sum + a.amount, 0);
+}
+
+applyAdjustment(anAdjustment){
+  this._adjustment.push(anAdjustment);
+  //this._production += adnAdjustment.amount;   //제거해준다.
+}
+```
 
 
 
