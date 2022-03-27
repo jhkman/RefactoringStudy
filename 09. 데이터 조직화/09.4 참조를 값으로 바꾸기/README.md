@@ -55,9 +55,9 @@ constructor(areaCode, number) {
 }
 
 //제거
-//get areaCode() {return this._areaCode;}       
+get areaCode() {return this._areaCode;}       
 //set areaCode(arg) {this._areaCode = arg;}
-//get number() {return this._number;}
+get number() {return this._number;}
 //set number(arg) {this._number = arg;}
 ```
 세터를 호출하던쪽을 살펴서 전화번호를 매번 다시 대입하도록 바꾸자
