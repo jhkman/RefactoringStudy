@@ -87,7 +87,6 @@ class Scorer{
 }
 ```
 이제 매개변수를 하나씩 옮기자
-> Scorer 클래스
 ```JS
 function score(candidate, medicalExam, scoringGuide){
   return new Scorer(candidate, medicalExam, scoringGuide).execute();
