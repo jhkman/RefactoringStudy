@@ -4,11 +4,26 @@
 class Person { 
   get name() {...} 
   set name(aString) {...}
+  
+  
+  //객체 생성
+  const martin = new Person();
+  martin.name = "마틴";
+  martin.id = "1234";
 ```
 ->
 ```JS
 class Person { 
+  constructor(id){
+    this.id = id;
+  }
+
   get name() {...}
+  
+  //객체 생성시 생성자를 통해 id를 설정하게끔 수정
+  const martin = new Person("1234");
+  martin.name = "마틴";
+  //martin.id = "1234";   //제거
 ```
 
 ### 배경
