@@ -4,6 +4,7 @@
 class Person { 
   get name() {...} 
   set name(aString) {...}
+  ...
   
   
   //객체 생성
@@ -19,6 +20,7 @@ class Person {
   }
 
   get name() {...}
+  ...
   
   //객체 생성시 생성자를 통해 id를 설정하게끔 수정
   const martin = new Person("1234");
