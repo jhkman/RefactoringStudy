@@ -70,6 +70,28 @@ if(!aPlan.xxNEWwithinRange(aRoom.daysTempRange))
   arerts.push("방 온도가 지정 범위를 벗어났습니다.");
 ```
 
-이런식으로 한번에 하나씩 수정하면서 테스트한다.
+이런식으로 한번에 하나씩 수정하면서 테스트한다.  
 
+5. 모두 새 함수로 대체했다면 원래 함수를 인라인 해준다.
+> HeatingPlan 클래스
+```JS
+xxNEWwithinRange(aNumberRange){
+  return (aNumberRange.low >= this._tempearatureRange.low)
+         && (aNumberRange.high <= this._tempearatureRange.high);
+}
+```
+
+6. 마지막으로 임시로 달아둔 접두어를 제거하고 호출자들에도 모두 반영해준다.
+> HeatingPlan 클래스
+```JS
+withinRange(aNumberRange){
+  return (aNumberRange.low >= this._tempearatureRange.low)
+         && (aNumberRange.high <= this._tempearatureRange.high);
+}
+```
+> 호출자
+```JS
+if(!aPlan.withinRange(aRoom.daysTempRange))
+  arerts.push("방 온도가 지정 범위를 벗어났습니다.");
+```
 
